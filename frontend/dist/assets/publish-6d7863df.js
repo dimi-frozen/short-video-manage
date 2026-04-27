@@ -1,0 +1,1 @@
+import{s}from"./request-6cb36417.js";function e(r){return s({url:"/publish",method:"post",data:r})}function u(r){return s({url:"/publish/confirm",method:"post",data:r})}function o(r){return s({url:`/publish/records/${r}`,method:"get"})}function i(r){return s({url:"/publish/records",method:"get",params:r})}export{e as a,u as c,o as g,i as l};

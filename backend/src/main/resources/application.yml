@@ -1,0 +1,86 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: short-video-manage
+  datasource:
+    url: jdbc:mysql://localhost:3306/short_video_db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: '0509'
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  redis:
+    host: localhost
+    port: 6379
+    password: 
+    database: 0
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.shortvideo.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+file:
+  upload-dir: uploads
+
+video:
+  upload:
+    base-dir: ${user.home}/short-video/upload
+    allowed-ext: mp4,mov,avi
+    max-bytes: 104857600
+  cleanup:
+    keep-days: 30
+
+platform:
+  douyin:
+    token-ttl-seconds: 7200
+    fixed-access-token: douyin_mock_access_token
+    upload-base-dir: ${user.home}/short-video/upload/douyin
+  bilibili:
+    token-ttl-seconds: 7200
+    fixed-access-token: bilibili_mock_access_token
+    upload-base-dir: ${user.home}/short-video/upload/bilibili
+  kuaishou:
+    mode: mock
+    token-ttl-seconds: 7200
+    fixed-access-token: kuaishou_mock_access_token
+    upload-base-dir: ${user.home}/short-video/upload/kuaishou
+    client-id:
+    client-secret:
+    redirect-uri:
+    scope:
+    oauth:
+      authorize-url:
+      token-url:
+
+# JWT 配置
+jwt:
+  secret: short-video-manage-secret-key-2026
+  expiration: 86400 # 24小时
+
+logging:
+  level:
+    com.shortvideo: debug
+
+aliyun:
+  oss:
+    endpoint: https://oss-cn-beijing.aliyuncs.com
+    bucket: shrot-vidio-manage
+    access-key-id: ${sky.alioss.access-key-id}
+    access-key-secret: ${sky.alioss.access-key-secret}
+    public-url-prefix:
+    public-read: true
+
+

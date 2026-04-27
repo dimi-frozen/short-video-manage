@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sv-bg: #f6f7fb;
+  --sv-panel: rgba(255, 255, 255, 0.72);
+  --sv-text: #0f172a;
+  --sv-subtext: rgba(15, 23, 42, 0.65);
+  --sv-border: rgba(15, 23, 42, 0.08);
+  --sv-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --sv-shadow-soft: 0 8px 24px rgba(15, 23, 42, 0.06);
+  --sv-radius: 14px;
+
+  --el-color-primary: #2563eb;
+  --el-border-radius-base: 10px;
+  --el-border-radius-round: 999px;
+  --el-font-family: Inter, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --el-text-color-primary: var(--sv-text);
+  --el-text-color-regular: rgba(15, 23, 42, 0.72);
+  --el-border-color: var(--sv-border);
+  --el-fill-color-blank: rgba(255, 255, 255, 0.86);
+  --el-fill-color-light: rgba(255, 255, 255, 0.76);
+  --el-box-shadow-light: var(--sv-shadow-soft);
+  --el-box-shadow: var(--sv-shadow);
+
+  font-family: var(--el-font-family);
+  color: var(--sv-text);
+  background-color: var(--sv-bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: radial-gradient(1200px 800px at 20% 0%, rgba(37, 99, 235, 0.14), transparent 60%),
+    radial-gradient(900px 700px at 85% 15%, rgba(16, 185, 129, 0.12), transparent 55%),
+    radial-gradient(1000px 800px at 50% 110%, rgba(245, 158, 11, 0.10), transparent 55%),
+    var(--sv-bg);
+  color: var(--sv-text);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.sv-card {
+  background: var(--sv-panel);
+  border: 1px solid var(--sv-border);
+  border-radius: var(--sv-radius);
+  box-shadow: var(--sv-shadow-soft);
+  backdrop-filter: blur(10px);
+}
+
+.sv-page {
+  padding: 18px;
+}
+
+.sv-toolbar {
+  margin-bottom: 14px;
+}
+
+.sv-table :deep(.el-table) {
+  border-radius: 12px;
+}
+
+.sv-table :deep(.el-table__inner-wrapper::before) {
+  background-color: transparent;
+}
+
+.sv-table :deep(.el-table tr) {
+  background-color: transparent;
+}
+
+.sv-table :deep(.el-table td.el-table__cell),
+.sv-table :deep(.el-table th.el-table__cell) {
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.sv-dialog :deep(.el-dialog) {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--sv-border);
+  box-shadow: var(--sv-shadow);
+}
+
+.sv-dialog :deep(.el-dialog__header) {
+  padding: 18px 18px 10px;
+}
+
+.sv-dialog :deep(.el-dialog__body) {
+  padding: 12px 18px 18px;
+}
+
+.sv-dialog :deep(.el-dialog__footer) {
+  padding: 0 18px 18px;
+}
