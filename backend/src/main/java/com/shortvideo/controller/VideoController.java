@@ -102,9 +102,10 @@ public class VideoController {
                                                     @RequestParam(defaultValue = "10") int pageSize,
                                                     @RequestParam(required = false) String keyword,
                                                     @RequestParam(required = false) String tag,
+                                                    @RequestParam(required = false) String auditStatus,
                                                     @RequestParam(required = false) List<String> sort,
                                                     @RequestParam(value = "includeUnapproved", defaultValue = "false") boolean includeUnapproved) {
-        return Result.success(svVideoService.page(pageNum, pageSize, keyword, tag, sort, includeUnapproved));
+        return Result.success(svVideoService.page(pageNum, pageSize, keyword, tag, auditStatus, sort, includeUnapproved));
     }
 
     /**

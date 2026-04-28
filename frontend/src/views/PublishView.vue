@@ -99,14 +99,29 @@
             </el-form-item>
 
             <el-form-item label="视频简介" prop="description">
-              <el-input
-                v-model="form.description"
-                type="textarea"
-                :rows="6"
-                placeholder="写点有趣的简介吧，支持 #标签"
-                @input="syncHashtags"
-              />
-              <div class="field-sub muted">在简介中输入 #旅行 #美食，会自动生成标签</div>
+              <div class="description-wrapper">
+                <el-input
+                  v-model="form.description"
+                  type="textarea"
+                  :rows="10"
+                  placeholder="写点有趣的简介吧，支持 #标签"
+                  @input="syncHashtags"
+                />
+                <div class="ai-actions">
+                  <div class="muted">在简介中输入 #旅行 #美食，会自动生成标签</div>
+                  <el-button 
+                    type="primary" 
+                    plain 
+                    size="small" 
+                    :loading="aiOptimizing"
+                    @click="handleAIOptimize"
+                    class="ai-btn"
+                  >
+                    <el-icon><MagicStick /></el-icon>
+                    AI 优化
+                  </el-button>
+                </div>
+              </div>
             </el-form-item>
 
             <el-form-item label="标签" prop="tags">
@@ -173,10 +188,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import type { FormInstance, FormRules, UploadFile } from 'element-plus'
-import { UploadFilled, PictureFilled } from '@element-plus/icons-vue'
+import { UploadFilled, PictureFilled, MagicStick } from '@element-plus/icons-vue'
 import { uploadVideoWithProgress } from '@/api/video'
+import { optimizeVideoDescription } from '@/api/ai'
 
 const router = useRouter()
 
@@ -190,6 +206,7 @@ const uploadPercent = ref(0)
 
 const formRef = ref<FormInstance>()
 const tagInput = ref('')
+const aiOptimizing = ref(false)  // AI 优化加载状态
 
 const form = reactive({
   title: '',
@@ -263,6 +280,46 @@ const syncHashtags = () => {
   let m: RegExpExecArray | null
   while ((m = regex.exec(text)) !== null) {
     addTag(m[1])
+  }
+}
+
+/**
+ * AI 优化视频简介
+ */
+const handleAIOptimize = async () => {
+  if (!form.description || form.description.trim().length < 5) {
+    ElMessage.warning('请先输入至少5个字的简介内容')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      'AI 将根据您的简介内容生成更吸引人的版本，是否继续？',
+      'AI 优化',
+      {
+        confirmButtonText: '开始优化',
+        cancelButtonText: '取消',
+        type: 'info'
+      }
+    )
+
+    aiOptimizing.value = true
+    const res: any = await optimizeVideoDescription(form.description)
+    
+    if (res.code === 0 && res.data.optimized) {
+      form.description = res.data.optimized
+      // 同步更新标签
+      syncHashtags()
+      ElMessage.success('AI 优化成功！')
+    } else {
+      ElMessage.error(res.message || 'AI 优化失败')
+    }
+  } catch (error: any) {
+    if (error !== 'cancel') {
+      ElMessage.error(error.message || 'AI 优化失败，请稍后重试')
+    }
+  } finally {
+    aiOptimizing.value = false
   }
 }
 
@@ -542,6 +599,25 @@ const goVideos = () => {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+}
+
+.description-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.ai-btn {
+  flex-shrink: 0;
 }
 
 .muted {

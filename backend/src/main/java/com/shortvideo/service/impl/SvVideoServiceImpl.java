@@ -139,6 +139,7 @@ public class SvVideoServiceImpl implements SvVideoService {
      * - 标题若更新则校验 1-128 字符
      * - tags 字段出现则视为全量覆盖（并重新编码保存）
      * - 并发写入由 @Version 乐观锁控制，冲突返回 409
+     * - 修改后视频状态重置为 PENDING，需要重新审核
      */
     @Override
     @Transactional
@@ -154,22 +155,45 @@ public class SvVideoServiceImpl implements SvVideoService {
             throw new SecurityException("无权操作该视频");
         }
 
+        boolean needReAudit = false;
         if (req != null) {
             if (req.getTitle() != null) {
                 String t = req.getTitle().trim();
                 if (t.length() < 1 || t.length() > 128) {
                     throw new IllegalArgumentException("标题长度需在1-128字符之间");
                 }
+                if (!t.equals(video.getTitle())) {
+                    needReAudit = true;
+                }
                 video.setTitle(t);
             }
             if (req.getDescription() != null) {
+                // 处理 null 值比较
+                boolean descChanged = (video.getDescription() == null && req.getDescription() != null)
+                        || (video.getDescription() != null && !video.getDescription().equals(req.getDescription()));
+                if (descChanged) {
+                    needReAudit = true;
+                }
                 video.setDescription(req.getDescription());
             }
             if (req.getTags() != null) {
                 // 只要 tags 字段出现，就视为全量覆盖
                 List<String> tagList = normalizeTags(req.getTags());
-                video.setTags(encodeTags(tagList));
+                String newTags = encodeTags(tagList);
+                // 处理 null 值比较
+                boolean tagsChanged = (video.getTags() == null && newTags != null)
+                        || (video.getTags() != null && !video.getTags().equals(newTags));
+                if (tagsChanged) {
+                    needReAudit = true;
+                }
+                video.setTags(newTags);
             }
+        }
+
+        // 如果内容发生变化，重置审核状态为 PENDING
+        if (needReAudit) {
+            video.setAuditStatus("PENDING");
+            // 不需要手动设置 updateTime，MyBatis-Plus 会自动处理
         }
 
         int rows = svVideoMapper.updateById(video);
@@ -221,7 +245,7 @@ public class SvVideoServiceImpl implements SvVideoService {
      */
     @Override
     @Transactional(readOnly = true)
-    public PageResp<VideoListItemResp> page(int pageNum, int pageSize, String keyword, String tag, List<String> sort, boolean includeUnapproved) {
+    public PageResp<VideoListItemResp> page(int pageNum, int pageSize, String keyword, String tag, String auditStatus, List<String> sort, boolean includeUnapproved) {
         Long currentUserId = getCurrentUserId();
         // 分页参数上限约束：pageNum>=1，pageSize<=100
         if (pageNum < 1) {
@@ -230,15 +254,21 @@ public class SvVideoServiceImpl implements SvVideoService {
         if (pageSize < 1 || pageSize > 100) {
             throw new IllegalArgumentException("pageSize必须在1-100之间");
         }
-
+    
         // 构建查询条件
         QueryWrapper<SvVideo> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", currentUserId)
                 .eq("deleted", false);
-
-        if (!includeUnapproved) {
+    
+        // 如果指定了审核状态，则按指定状态过滤
+        if (StringUtils.hasText(auditStatus)) {
+            queryWrapper.eq("audit_status", auditStatus.trim().toUpperCase());
+        } else if (!includeUnapproved) {
+            // 如果没有指定审核状态且不包含未审核的，则只显示已通过的
             queryWrapper.eq("audit_status", "APPROVED");
         }
+        // 如果 includeUnapproved=true 且 auditStatus 为空，则显示所有审核状态的视频
+            
         if (StringUtils.hasText(keyword)) {
             String like = "%" + keyword.trim() + "%";
             queryWrapper.and(wrapper -> wrapper
@@ -249,18 +279,18 @@ public class SvVideoServiceImpl implements SvVideoService {
         }
         if (StringUtils.hasText(tag)) {
             String t = tag.trim();
-            queryWrapper.like("tags", "%," + t + ",%");
+            queryWrapper.like("tags", "," + t + ",");
         }
-
+    
         // 应用排序
         applySorting(queryWrapper, sort);
-
+    
         // 执行分页查询
         Page<SvVideo> mpPage = new Page<>(pageNum, pageSize);
         Page<SvVideo> page = svVideoMapper.selectPage(mpPage, queryWrapper);
-
+    
         List<VideoListItemResp> list = convertToListItemRespList(page.getRecords());
-
+    
         PageResp<VideoListItemResp> resp = new PageResp<>();
         resp.setTotal(page.getTotal());
         resp.setList(list);

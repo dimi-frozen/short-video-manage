@@ -46,7 +46,7 @@ public interface SvVideoService {
      * 分页查询：keyword 模糊搜索（title/description），tag 精确过滤，sort 支持多字段排序。
      */
     default PageResp<VideoListItemResp> page(int pageNum, int pageSize, String keyword, String tag, List<String> sort) {
-        return page(pageNum, pageSize, keyword, tag, sort, false);
+        return page(pageNum, pageSize, keyword, tag, null, sort, false);
     }
 
     /**
@@ -54,7 +54,7 @@ public interface SvVideoService {
      *
      * @param includeUnapproved true 时返回 PENDING/REJECTED 等未通过审核的视频（仍会过滤 deleted=true）
      */
-    PageResp<VideoListItemResp> page(int pageNum, int pageSize, String keyword, String tag, List<String> sort, boolean includeUnapproved);
+    PageResp<VideoListItemResp> page(int pageNum, int pageSize, String keyword, String tag, String auditStatus, List<String> sort, boolean includeUnapproved);
 
     /**
      * 播放量+1

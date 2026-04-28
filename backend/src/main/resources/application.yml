@@ -83,4 +83,25 @@ aliyun:
     public-url-prefix:
     public-read: true
 
+# AI 大模型配置
+ai:
+  provider: dashscope  # 使用阿里云通义千问
+  dashscope:
+    api-key:   # 通义千问 API Key
+    model: qwen-turbo  # qwen-turbo / qwen-plus / qwen-max
+    endpoint: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+  prompt-template: |
+    请帮我优化以下视频简介，使其更具吸引力和传播性。
+    你是专业的视频内容运营，请帮我优化以下视频简介：
+    1. 优化目标：理解简介含义，提升吸引力，突出视频亮点，增加用户停留和互动意愿
+    2. 风格：自然不生硬，适配主流短视频平台
+    3. 要求：控制在150字以内，适当使用热门话题标签，结尾加一句引导互动的话
+    4. 注意：只输出优化后的简介，不要多余解释
+    5. 注意：不要修改原来的#标签内容
+    
+    原始简介：
+    {description}
+    
+    请只返回优化后的简介文本，不要包含其他说明。
+
 

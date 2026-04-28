@@ -7,6 +7,12 @@
             <div class="left">
               <el-input v-model="localQuery.keyword" placeholder="搜索标题/描述" clearable style="width: 260px" @keyup.enter="loadLocal" />
               <el-input v-model="localQuery.tag" placeholder="按标签过滤" clearable style="width: 180px" @keyup.enter="loadLocal" />
+              <el-select v-model="localQuery.auditStatus" clearable placeholder="审核状态" style="width: 140px">
+                <el-option label="全部" value="" />
+                <el-option label="已通过" value="APPROVED" />
+                <el-option label="待审核" value="PENDING" />
+                <el-option label="已拒绝" value="REJECTED" />
+              </el-select>
               <el-button type="primary" @click="loadLocal">查询</el-button>
               <el-button @click="resetLocal">重置</el-button>
             </div>
@@ -33,6 +39,14 @@
             </el-table-column>
             <el-table-column prop="duration" label="时长(s)" width="110" />
             <el-table-column prop="status" label="状态" width="120" />
+            <el-table-column label="审核状态" width="120">
+              <template #default="{ row }">
+                <el-tag v-if="row.auditStatus === 'APPROVED'" type="success" size="small">已通过</el-tag>
+                <el-tag v-else-if="row.auditStatus === 'PENDING'" type="warning" size="small">待审核</el-tag>
+                <el-tag v-else-if="row.auditStatus === 'REJECTED'" type="danger" size="small">已拒绝</el-tag>
+                <el-tag v-else type="info" size="small">{{ row.auditStatus || '-' }}</el-tag>
+              </template>
+            </el-table-column>
             <el-table-column prop="createTime" label="创建时间" sortable="custom" width="190" />
             <el-table-column prop="updateTime" label="更新时间" sortable="custom" width="190" />
             <el-table-column label="操作" width="220" fixed="right">
@@ -279,6 +293,7 @@ const localQuery = reactive({
   pageSize: 10,
   keyword: '',
   tag: '',
+  auditStatus: '',  // 审核状态筛选
   sort: [] as string[]
 })
 
@@ -360,8 +375,9 @@ const loadLocal = async () => {
     pageSize: localQuery.pageSize,
     keyword: localQuery.keyword || undefined,
     tag: localQuery.tag || undefined,
+    auditStatus: localQuery.auditStatus || undefined,
     sort: localQuery.sort.length ? localQuery.sort : undefined,
-    includeUnapproved: false
+    includeUnapproved: true  // 显示所有审核状态的视频
   })
   localTotal.value = res.data.total || 0
   localTableData.value = res.data.list || []
@@ -372,6 +388,7 @@ const resetLocal = async () => {
   localQuery.pageSize = 10
   localQuery.keyword = ''
   localQuery.tag = ''
+  localQuery.auditStatus = ''
   localQuery.sort = []
   await loadLocal()
 }
@@ -519,12 +536,24 @@ const submitEdit = async () => {
     if (!currentEditId.value) return
     saving.value = true
     try {
-      await updateVideo(currentEditId.value, {
+      const res: any = await updateVideo(currentEditId.value, {
         title: editForm.title,
         description: editForm.description,
         tags: editForm.tags
       })
-      ElMessage.success('保存成功')
+      
+      // 检查审核状态，根据不同状态显示不同提示
+      if (res.data && res.data.auditStatus === 'PENDING') {
+        ElMessage({
+          message: '修改成功！视频内容已更新，当前状态为待审核。',
+          type: 'warning',
+          duration: 5000,
+          showClose: true
+        })
+      } else {
+        ElMessage.success('修改成功')
+      }
+      
       editVisible.value = false
       await loadLocal()
     } finally {
