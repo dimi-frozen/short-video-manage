@@ -1,6 +1,8 @@
 package com.shortvideo.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -21,9 +23,11 @@ import java.time.LocalDateTime;
 @TableName("sv_video")
 public class SvVideo {
     @TableId(type = IdType.AUTO)
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long id;
 
     @TableField("user_id")
+    @JsonSerialize(using = ToStringSerializer.class)
     private Long userId;
 
     @TableField("title")

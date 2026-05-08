@@ -75,18 +75,16 @@
           </div>
 
           <div class="comments-list">
-            <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <div class="comment-avatar">
-                <el-icon><User /></el-icon>
-              </div>
-              <div class="comment-content-box">
-                <div class="comment-user">{{ comment.userNickname || '匿名用户' }}</div>
-                <div class="comment-text">{{ comment.content }}</div>
-                <div class="comment-meta">
-                  <span class="comment-time">{{ formatCommentTime(comment.createTime) }}</span>
-                </div>
-              </div>
-            </div>
+            <CommentThread
+              v-for="comment in comments"
+              :key="comment.id"
+              :comment="comment"
+              :video-id="videoId"
+              :current-user-id="currentUserId"
+              :video-owner-id="videoDetail?.userId"
+              @reply-success="fetchComments"
+              @delete-success="fetchComments"
+            />
             
             <div v-if="comments.length === 0 && !commentLoading" class="no-comments">
               <el-empty description="还没有评论，快来抢沙发吧~" :image-size="100" />
@@ -141,9 +139,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { VideoPlay, Clock, Star, User } from '@element-plus/icons-vue'
+import { VideoPlay, Clock, Star, User, ChatDotRound } from '@element-plus/icons-vue'
 import { getPublicVideo, incrementVideoViews, incrementVideoLikes, getRelatedVideos, type VideoDetail } from '@/api/video'
-import { getCommentList, addComment, type Comment, type AddCommentReq } from '@/api/comment'
+import { getCommentList, addComment, replyComment, getChildComments, type Comment, type AddCommentReq, type ReplyCommentReq } from '@/api/comment'
+import CommentThread from '@/components/CommentThread.vue'
 
 const route = useRoute()
 const videoId = Number(route.params.id)
@@ -153,6 +152,7 @@ const videoDetail = ref<VideoDetail | null>(null)
 const isDescExpanded = ref(false)
 const hasLiked = ref(false)
 const relatedVideos = ref<any[]>([])
+const currentUserId = ref<number | null>(null)  // 当前登录用户ID
 
 // 评论相关
 const newComment = ref('')
@@ -166,8 +166,12 @@ const fetchComments = async () => {
   try {
     const res: any = await getCommentList(videoId)
     if (res.code === 0) {
-      // 只改这一行！去掉 .list
       comments.value = res.data || []
+      // 递归加载所有层级的子评论，并扁平化到一级评论的children中
+      for (const comment of comments.value) {
+        comment.children = []
+        await loadChildrenAndFlatten(comment.id, comment)
+      }
     } else {
       ElMessage.error(res.message || '获取评论列表失败')
     }
@@ -178,6 +182,24 @@ const fetchComments = async () => {
   }
 }
 
+// 递归加载子评论并扁平化
+const loadChildrenAndFlatten = async (parentId: number, rootComment: Comment) => {
+  try {
+    const res: any = await getChildComments(parentId)
+    if (res.code === 0) {
+      const children = res.data || []
+      // 将所有子评论（包括三级、四级...）都添加到根评论的children中
+      for (const child of children) {
+        rootComment.children!.push(child)
+        // 继续递归加载更深层级的评论
+        await loadChildrenAndFlatten(child.id, rootComment)
+      }
+    }
+  } catch (e) {
+    console.error('加载子评论失败', e)
+  }
+}
+
 const fetchVideoDetail = async () => {
   if (!videoId) return
   loading.value = true
@@ -185,6 +207,23 @@ const fetchVideoDetail = async () => {
     const res: any = await getPublicVideo(videoId)
     if (res.code === 0) {
       videoDetail.value = res.data
+      console.log('视频详情:', videoDetail.value)
+      
+      // 获取当前登录用户ID（从localStorage或token中解析）
+      const token = localStorage.getItem('token')
+      if (token) {
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          console.log('Token payload:', payload)
+          currentUserId.value = payload.userId || payload.sub
+          console.log('当前用户ID:', currentUserId.value)
+        } catch (e) {
+          console.error('解析token失败', e)
+        }
+      } else {
+        console.log('未找到token')
+      }
+      
       // 获取视频详情后获取评论和推荐
       fetchComments()
       fetchRelatedVideos()
@@ -629,10 +668,92 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  transition: color 0.2s;
 }
 
 .comment-action:hover {
   color: #3b82f6;
+}
+
+/* 回复输入框 */
+.reply-input-box {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 8px;
+}
+
+.reply-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 子评论 */
+.child-comments {
+  margin-top: 16px;
+  padding-left: 20px;
+  border-left: 2px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.child-comment-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+  position: relative;
+}
+
+.child-comment-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+
+.child-comment-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.child-comment-user {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 4px;
+  font-weight: 500;
+}
+
+.child-comment-text {
+  font-size: 13px;
+  color: #1f2937;
+  line-height: 1.5;
+  margin-bottom: 6px;
+  white-space: pre-wrap;
+}
+
+.child-comment-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* 多层级嵌套样式 */
+.child-comments .child-comments {
+  margin-top: 8px;
+  padding-left: 16px;
 }
 
 .no-comments {
