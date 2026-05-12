@@ -64,6 +64,11 @@
           </el-table-column>
         </el-table>
       </el-tab-pane>
+
+      <!-- 举报管理 -->
+      <el-tab-pane label="举报管理" name="report">
+        <AdminReportView />
+      </el-tab-pane>
     </el-tabs>
   </div>
 </template>
@@ -73,6 +78,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import request from '@/utils/request'
+import AdminReportView from './AdminReportView.vue'
 
 const route = useRoute()
 const router = useRouter()

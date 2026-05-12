@@ -33,6 +33,9 @@
             <span class="meta-item like-btn" :class="{ 'has-liked': hasLiked }" @click="handleLike">
               <el-icon><Star /></el-icon> {{ formatNumber(videoDetail?.likes || 0) }} 点赞
             </span>
+            <span class="meta-item report-btn" @click="showReportDialog">
+              <el-icon><Warning /></el-icon> 举报
+            </span>
           </div>
 
           <div class="video-desc" :class="{ 'expanded': isDescExpanded }">
@@ -132,6 +135,30 @@
         </div>
       </div>
     </div>
+
+    <!-- 举报对话框 -->
+    <el-dialog v-model="reportDialogVisible" title="举报视频" width="500px">
+      <el-form :model="reportForm" label-width="80px">
+        <el-form-item label="举报理由">
+          <el-input
+            v-model="reportForm.reason"
+            type="textarea"
+            :rows="5"
+            placeholder="请详细描述举报理由（最多500字）"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="reportDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="submitReport" :loading="reportLoading">
+            提交举报
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -139,9 +166,10 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { VideoPlay, Clock, Star, User, ChatDotRound } from '@element-plus/icons-vue'
+import { VideoPlay, Clock, Star, User, ChatDotRound, Warning } from '@element-plus/icons-vue'
 import { getPublicVideo, incrementVideoViews, incrementVideoLikes, getRelatedVideos, type VideoDetail } from '@/api/video'
 import { getCommentList, addComment, replyComment, getChildComments, type Comment, type AddCommentReq, type ReplyCommentReq } from '@/api/comment'
+import { reportVideo } from '@/api/report'
 import CommentThread from '@/components/CommentThread.vue'
 
 const route = useRoute()
@@ -158,6 +186,13 @@ const currentUserId = ref<number | null>(null)  // 当前登录用户ID
 const newComment = ref('')
 const comments = ref<Comment[]>([])
 const commentLoading = ref(false)
+
+// 举报相关
+const reportDialogVisible = ref(false)
+const reportLoading = ref(false)
+const reportForm = ref({
+  reason: ''
+})
 
 // 获取评论列表
 const fetchComments = async () => {
@@ -296,6 +331,41 @@ const submitComment = async () => {
     }
   } catch (e) {
     ElMessage.error('评论发表失败')
+  }
+}
+
+const showReportDialog = () => {
+  if (!currentUserId.value) {
+    ElMessage.warning('请先登录')
+    return
+  }
+  reportForm.value.reason = ''
+  reportDialogVisible.value = true
+}
+
+const submitReport = async () => {
+  if (!reportForm.value.reason.trim()) {
+    ElMessage.warning('请填写举报理由')
+    return
+  }
+  
+  reportLoading.value = true
+  try {
+    const res: any = await reportVideo({
+      videoId,
+      reason: reportForm.value.reason.trim()
+    })
+    
+    if (res.code === 0 || res.code === 200) {
+      ElMessage.success(res.message || '举报成功，我们会尽快处理')
+      reportDialogVisible.value = false
+    } else {
+      ElMessage.error(res.message || '举报失败')
+    }
+  } catch (e: any) {
+    ElMessage.error(e.message || '举报失败')
+  } finally {
+    reportLoading.value = false
   }
 }
 
@@ -453,6 +523,16 @@ onMounted(() => {
 .like-btn.has-liked {
   color: #3b82f6;
   font-weight: 500;
+}
+
+.report-btn {
+  cursor: pointer;
+  transition: color 0.3s;
+  color: #ef4444;
+}
+
+.report-btn:hover {
+  color: #dc2626;
 }
 
 /* B站风格作者卡片 */
