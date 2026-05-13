@@ -64,6 +64,14 @@ public class AdminServiceImpl implements AdminService {
     // 删除用户
     @Override
     public void deleteUser(Long id) {
+        User user = userMapper.selectById(id);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        // 禁止删除管理员账号
+        if ("admin".equalsIgnoreCase(user.getRole())) {
+            throw new RuntimeException("不能删除管理员账号");
+        }
         userMapper.deleteById(id);
     }
 }

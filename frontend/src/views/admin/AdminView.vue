@@ -59,7 +59,14 @@
           <el-table-column prop="createdAt" label="创建时间" width="180" />
           <el-table-column label="操作" width="100">
             <template #default="scope">
-              <el-button type="danger" size="small" @click="deleteUser(scope.row.id)">删除</el-button>
+              <el-button 
+                type="danger" 
+                size="small" 
+                :disabled="scope.row.role === 'admin'"
+                @click="deleteUser(scope.row.id)"
+              >
+                删除
+              </el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -232,7 +239,8 @@ const deleteUser = async (id) => {
     ElMessage.success('删除成功')
     loadUsers()
   } catch (err) {
-    ElMessage.error('删除失败')
+    const errorMsg = err.response?.data?.message || err.message || '删除失败'
+    ElMessage.error(errorMsg)
   }
 }
 </script>
